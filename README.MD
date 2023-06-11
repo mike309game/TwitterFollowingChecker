@@ -30,3 +30,7 @@ This is a dumb script to periodically check a Twitter profile's following/follow
 - If everything goes right, the script will begin doing its thing.
 
 For running the script outside a terminal window that's up to you to figure out.
+
+# Why
+
+Because I kept seeing my following counter changing every so often for no reason and it was mostly people deactivating, but I wanna know if someone DOES sb me for whatever reason
