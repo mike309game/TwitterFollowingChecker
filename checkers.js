@@ -31,6 +31,29 @@ async function DealRateLimit(target) {
 	}
 }
 
+async function SafeFetch(...args) {
+	try {
+		return await fetch(...args);
+	} catch(e) {
+		let message = e.toString();
+		let wait = 10 * 60 * 1000;
+		switch(e.code) {
+			case 'ECONNABORTED':
+			case 'ECONNRESET':
+			case 'ETIMEDOUT':
+				message = `Internet's having a stroke (code ${e.code}), retrying in 10 minutes`;
+				break;
+			case 'ENOTFOUND':
+				message = "Internet's out, trying again in 1 minute";
+				wait = 1 * 60 * 1000;
+				break;
+		}
+		console.log(message);
+		await Halt(wait);
+		return await SafeFetch(...args);
+	}
+}
+
 async function DoRequest(query, body, param) {
 	let paramReal = '';
 	//uhhh fuckin there's probably a better way to do this with js magic but i touch grass so i'm doing it in a sane way
@@ -46,40 +69,29 @@ async function DoRequest(query, body, param) {
 		}
 	}
 	//console.log(`https://twitter.com/i/api/graphql/${query.id}/${query.name}${paramReal}`);
-	let resp;
-	try { //if the internet's out keep trying and trying to do the same thing
-		resp = await fetch(`https://twitter.com/i/api/graphql/${query.id}/${query.name}${paramReal}`, {
-		"headers": {
-			"accept": "*/*",
-			"accept-language": "en-US,en;q=0.9",
-			"authorization": `${conf.auth}`,
-			"content-type": "application/json",
-			"sec-ch-ua": "\"Chromium\";v=\"112\", \"Google Chrome\";v=\"112\", \"Not:A-Brand\";v=\"99\"",
-			"sec-ch-ua-mobile": "?0",
-			"sec-ch-ua-platform": "\"Windows\"",
-			"sec-fetch-dest": "empty",
-			"sec-fetch-mode": "cors",
-			"sec-fetch-site": "same-origin",
-			"x-csrf-token": `${conf.csrf}`,
-			"x-twitter-active-user": "yes",
-			"x-twitter-auth-type": "OAuth2Session",
-			"x-twitter-client-language": "en",
-			"cookie": `${conf.cookie}`,
-			"Referer": "https://twitter.com/",
-			"Referrer-Policy": "strict-origin-when-cross-origin"
-		},
-		"body": body,
-		"method": "GET"
-		});
-	} catch(e) {
-		if(e.code == 'ENOTFOUND') {
-			console.log("Internet's out, trying again in 10 secssssss");
-		} else {
-			console.log(`ERROR DOING REQUEST: ${e}`);
-		}
-		await Halt(10 * 1000);
-		return await DoRequest(query, body, param);
-	}
+	let resp = await SafeFetch(`https://twitter.com/i/api/graphql/${query.id}/${query.name}${paramReal}`, {
+	"headers": {
+		"accept": "*/*",
+		"accept-language": "en-US,en;q=0.9",
+		"authorization": `${conf.auth}`,
+		"content-type": "application/json",
+		"sec-ch-ua": "\"Chromium\";v=\"112\", \"Google Chrome\";v=\"112\", \"Not:A-Brand\";v=\"99\"",
+		"sec-ch-ua-mobile": "?0",
+		"sec-ch-ua-platform": "\"Windows\"",
+		"sec-fetch-dest": "empty",
+		"sec-fetch-mode": "cors",
+		"sec-fetch-site": "same-origin",
+		"x-csrf-token": `${conf.csrf}`,
+		"x-twitter-active-user": "yes",
+		"x-twitter-auth-type": "OAuth2Session",
+		"x-twitter-client-language": "en",
+		"cookie": `${conf.cookie}`,
+		"Referer": "https://twitter.com/",
+		"Referrer-Policy": "strict-origin-when-cross-origin"
+	},
+	"body": body,
+	"method": "GET"
+	});
 	switch(resp.status) {
 		//lets, shhhh, for now, hope it doesn't happen
 		//(commented because of that resp.json call)
@@ -148,7 +160,7 @@ async function GetUsers(query) {
 }
 
 async function NotifyWebhook(user, caption, colour) {
-	let req = await fetch(conf.webhook,
+	let req = await SafeFetch(conf.webhook,
 	{
 		"headers": {
 			"accept": "application/json",
