@@ -3,7 +3,11 @@ const fs = require('fs');
 //ouch ouch my eyes!! (what i sound like when i use np++ because any theme other than the white one is broken in one way or another)
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
-const conf = JSON.parse(fs.readFileSync('conf.json', 'utf8'));
+let confFname = 'conf.json';
+if(process.argv[2]) {
+	confFname = process.argv[2];
+}
+const conf = JSON.parse(fs.readFileSync(confFname, 'utf8'));
 
 const QUERIES = {
 	FOLLOWING: {
@@ -196,18 +200,44 @@ async function CheckUserDifferences(users, oldUsers, newCaption, goneCaption) {
 	}
 }
 
+function SaveJson(fname, json) {
+	fs.writeFileSync(fname, JSON.stringify(json, null, '\t'));
+}
+
 (async() => {
-	console.log('Getting initial list');
-	var followersLast = await GetUsers(QUERIES.FOLLOWERS);
-	var followingLast = await GetUsers(QUERIES.FOLLOWING);
+	let latestFollowersFname = `lastFollowers${conf.userId}.json`;
+	let latestFollowingFname = `lastFollowing${conf.userId}.json`;
+	var followersLast;
+	var followingLast;
+	//////////////////////////////////////////////////////////////////////////
+	if(fs.existsSync(latestFollowersFname)) {
+		console.log('Loading latest saved followers');
+		followersLast = JSON.parse(fs.readFileSync(latestFollowersFname));
+	} else {
+		console.log('Getting initial followers list');
+		followersLast = await GetUsers(QUERIES.FOLLOWERS);
+		SaveJson(latestFollowersFname, followersLast);
+	}
+	//////////////////////////////////////////////////////////////////////////
+	if(fs.existsSync(latestFollowingFname)) {
+		console.log('Loading latest saved followings');
+		followingLast = JSON.parse(fs.readFileSync(latestFollowingFname));
+	} else {
+		console.log('Getting initial following list');
+		followingLast = await GetUsers(QUERIES.FOLLOWING);
+		SaveJson(latestFollowingFname, followingLast);
+	}
+	//////////////////////////////////////////////////////////////////////////
 	console.log('-------------------------');
 	for(;;) {
 		await Halt(conf.waitMs);
 		console.log('Checking, current time is', Date(), Date.now() / 1000);
-		console.log('Downloading followers list');
+		console.log('Downloading latest followers list');
 		let followersCurrent = await GetUsers(QUERIES.FOLLOWERS);
-		console.log('Downloading following list');
+		SaveJson(latestFollowersFname, followersCurrent);
+		console.log('Downloading latest following list');
 		let followingCurrent = await GetUsers(QUERIES.FOLLOWING);
+		SaveJson(latestFollowingFname, followingCurrent);
 		
 		console.log('Checking follower differences');
 		await CheckUserDifferences(followersCurrent, followersLast, "New follower", "LOST FOLLOWER");
