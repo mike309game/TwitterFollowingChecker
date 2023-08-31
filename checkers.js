@@ -234,15 +234,17 @@ function SaveJson(fname, json) {
 		console.log('Checking, current time is', Date(), Date.now() / 1000);
 		console.log('Downloading latest followers list');
 		let followersCurrent = await GetUsers(QUERIES.FOLLOWERS);
-		SaveJson(latestFollowersFname, followersCurrent);
 		console.log('Downloading latest following list');
 		let followingCurrent = await GetUsers(QUERIES.FOLLOWING);
-		SaveJson(latestFollowingFname, followingCurrent);
 		
 		console.log('Checking follower differences');
 		await CheckUserDifferences(followersCurrent, followersLast, "New follower", "LOST FOLLOWER");
 		console.log('Checking following differences');
 		await CheckUserDifferences(followingCurrent, followingLast, "Following new user", "UNFOLLOWED USER");
+		
+		//only save these after checking so that incase of errors nothing is accidentally dismissed
+		SaveJson(latestFollowersFname, followersCurrent);
+		SaveJson(latestFollowingFname, followingCurrent);
 		
 		console.log('-------------------------');
 		followersLast = followersCurrent;
