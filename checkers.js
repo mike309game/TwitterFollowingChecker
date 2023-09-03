@@ -145,12 +145,20 @@ async function GetUsers(query) {
 					if(entry.content.entryType == 'TimelineTimelineCursor' && entry.content.cursorType == 'Bottom') {
 						cursor = entry.content.value;
 					} else if(entry.content.entryType == 'TimelineTimelineItem') {
+						if(entry.content.itemContent.user_results.result.__typename == 'UserUnavailable') {
+							console.log('TWITTER RETURNED A USER THAT DOESN\'T EXIST!!!! LOL!!!!');
+							continue;
+						}
 						hadSomething = true;
+						//console.log(entry.content.itemContent.user_results.result);
 						result.push(
 							[entry.content.itemContent.user_results.result.rest_id,
 							entry.content.itemContent.user_results.result.legacy.screen_name,
 							entry.content.itemContent.user_results.result.legacy.profile_image_url_https,
-							entry.content.itemContent.user_results.result.legacy.name]
+							entry.content.itemContent.user_results.result.legacy.name,
+							entry.content.itemContent.user_results.result.legacy.description,
+							entry.content.itemContent.user_results.result.legacy.location,
+							entry.content.itemContent.user_results.result.legacy.url]
 						);
 					}
 				}
